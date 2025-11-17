@@ -1,120 +1,141 @@
-[# Ex.No: 10  Implementation of 2D/3D game                                                                            
-### REGISTER NUMBER : 212223240063
-### GAME NAME: Maze Runner AI
-### AIM: 
-To develop a Unity 3D game where an AI-controlled agent uses reinforcement learning (via Unity ML-Agents) to autonomously navigate through a maze and reach a designated goal, demonstrating basic principles of artificial intelligence in games.
+## Ex.No: 10 — Implementation of 2D Game in Unity
 
-### Algorithm:
+## Date: 11/11/2025
+## Register Number: 212223240124
 
-1.Setup Unity ML-Agents:
+## AIM:
 
-    Install Unity and ML-Agents Toolkit.
+To develop a 2D side-scrolling “Rock Blaster” game in Unity where the player controls a spaceship that shoots lasers to destroy incoming rocks using C# scripting and basic AI logic for object movement.
 
-    Create a new 3D project.
-
-    Import ML-Agents package into Unity.
-2.Design the Environment:
-
-    Add a Plane as the ground.
-
-    Create a simple maze using 3D Cubes as walls.
-    Add a Sphere as the goal object.
-
-3.Create the Agent:
-
-    Add a Capsule as the player.
-    Attach Rigidbody and create a C# script MazeAgent.cs.
-    Define observation space, actions, and reward functions.
-
-4.Agent Logic:
-
-    Reward agent for reaching the target.
-
-    Penalize for time consumption or wall collisions.
-
-    Randomize the goal position each episode.
-
-4.Training:
-
-    Configure Behavior Parameters.
-
-    Use Heuristic mode for manual testing.
-
-    Optionally train with mlagents-learn command.
-
-5.Testing & Output:
-
-    Run the game in Unity.
-
-    Observe the agent learning and navigating the maze.
-
-### Program:
-### MazeAgent.cs
+## Algorithm:
 ```
-using Unity.MLAgents;
-using Unity.MLAgents.Actuators;
-using Unity.MLAgents.Sensors;
+Start the Unity project and create a new 2D scene.
+
+Design the background using a static image or tilemap.
+
+Create the player object with movement controls using a Rigidbody2D or transform translation.
+
+Add a laser prefab and script it to move forward when fired.
+
+Implement shooting mechanics using a custom PlayerShooting script (laser instantiation).
+
+Create the rock prefab and use a spawnManager script to spawn rocks at random intervals.
+
+Write collision detection scripts so that when the laser hits the rock, both are destroyed.
+
+Add score and sound effects (optional).
+
+Test the game by running it and adjusting spawn positions, laser direction, and collision triggers.
+
+Build and run the project to verify smooth gameplay and correct collision behavior.
+```
+## Program:
+```
+PlayerShooting.cs
 using UnityEngine;
 
-public class MazeAgent : Agent
+public class PlayerShooting : MonoBehaviour
 {
-    public Transform target;
-    private Rigidbody agentRb;
+    public GameObject laserPrefab;
+    public float shootCooldown = 0.25f;
+    public float forwardOffset = 1.0f;
+    public float downwardOffset = -0.25f;
+    private float lastShotTime;
 
-    public override void Initialize()
+    void Update()
     {
-        agentRb = GetComponent<Rigidbody>();
-    }
-
-    public override void OnEpisodeBegin()
-    {
-        this.transform.localPosition = new Vector3(-4, 0.5f, -4);
-        agentRb.velocity = Vector3.zero;
-
-        target.localPosition = new Vector3(Random.Range(-4, 4), 0.5f, Random.Range(-4, 4));
-    }
-
-    public override void CollectObservations(VectorSensor sensor)
-    {
-        sensor.AddObservation(this.transform.localPosition);
-        sensor.AddObservation(target.localPosition);
-        sensor.AddObservation(agentRb.velocity.x);
-        sensor.AddObservation(agentRb.velocity.z);
-    }
-
-    public override void OnActionReceived(ActionBuffers actions)
-    {
-        float moveX = actions.ContinuousActions[0];
-        float moveZ = actions.ContinuousActions[1];
-
-        Vector3 move = new Vector3(moveX, 0, moveZ);
-        agentRb.AddForce(move * 10f);
-
-        float distanceToTarget = Vector3.Distance(this.transform.localPosition, target.localPosition);
-
-        if (distanceToTarget < 1.5f)
+        if (Input.GetKeyDown(KeyCode.Space) && Time.time > lastShotTime + shootCooldown)
         {
-            SetReward(1.0f);
-            EndEpisode();
+            Shoot();
+            lastShotTime = Time.time;
         }
-
-        AddReward(-0.001f);
     }
 
-    public override void Heuristic(in ActionBuffers actionsOut)
+    void Shoot()
     {
-        var continuousActionsOut = actionsOut.ContinuousActions;
-        continuousActionsOut[0] = Input.GetAxis("Horizontal");
-        continuousActionsOut[1] = Input.GetAxis("Vertical");
+        Vector3 spawnPos = transform.position + new Vector3(forwardOffset, downwardOffset, 0f);
+        Instantiate(laserPrefab, spawnPos, Quaternion.identity);
     }
 }
 ```
-### Output:
+```
+Laser.cs
+using UnityEngine;
 
-![Mini project Output](https://github.com/user-attachments/assets/60cc6f30-9bc5-401a-b12c-bacfd06bd71b)
+public class Laser : MonoBehaviour
+{
+    public float speed = 10f;
+
+    void Update()
+    {
+        transform.Translate(Vector2.right * speed * Time.deltaTime);
+    }
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (other.CompareTag("Rock"))
+        {
+            Destroy(other.gameObject);
+            Destroy(gameObject);
+        }
+    }
+}
+```
+```
+spawnManager.cs
+using UnityEngine;
+using System.Collections;
+
+public class spawnManager : MonoBehaviour
+{
+    public GameObject rock;
+
+    void Start()
+    {
+        StartCoroutine(SpawnRocks());
+    }
+
+    IEnumerator SpawnRocks()
+    {
+        while (true)
+        {
+            yield return new WaitForSeconds(Random.Range(3f, 6f));
+            Vector3 pos = new Vector3(Random.Range(12f, 15f), -3.4f, 0f);
+            Instantiate(rock, pos, Quaternion.identity);
+        }
+    }
+}
+```
+```
+Rock.cs
+using UnityEngine;
+
+public class Rock : MonoBehaviour
+{
+    public float speed = 3f;
+
+    void Update()
+    {
+        transform.Translate(Vector2.left * speed * Time.deltaTime);
+    }
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (other.CompareTag("Player") || other.CompareTag("Laser"))
+        {
+            Destroy(gameObject);
+        }
+    }
+}
+```
+## Output:
+
+The player can shoot lasers from their spaceship to destroy incoming rocks.
+The rocks spawn randomly from the right side and move left across the screen.
+When the laser hits a rock, both objects are destroyed.
+<img width="1481" height="933" alt="image" src="https://github.com/user-attachments/assets/2226f375-4622-4b76-b1ac-9e9a373bb160" />
+
+## Result:
+Thus, the 2D “Rock Blaster” game was successfully developed using Unity and implemented with AI-based random spawning and collision detection logic for dynamic gameplay.
 
 
-### Result:
-The AI agent was trained using Unity ML-Agents to navigate a 3D maze environment. With reinforcement learning principles, it learned to reach the target effectively, demonstrating successful AI navigation implementation in Unity.
-
-](https://github.com/Kamaleshwa/19AI550_new/blob/main/Ex.No.9_ReinforcementLearning.md)
